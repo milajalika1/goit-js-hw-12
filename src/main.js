@@ -23,12 +23,8 @@ const onFormSubmit = async event => {
   try {
     event.preventDefault();
     galleryEl.innerHTML = '';
-    loaderEl.classList.remove('is-hidden');
-    searchedValue = searchForm.elements.user_query.value;
 
-    currentPage = 1;
-    const response = await fetchImages(searchedValue, currentPage);
-    console.log(response);
+    searchedValue = searchForm.elements.user_query.value;
 
     if (searchedValue === '') {
       iziToast.warning({
@@ -37,8 +33,14 @@ const onFormSubmit = async event => {
         timeout: 2000,
         position: 'topCenter',
       });
+      loadMoreEl.classList.add('is-hidden');
       return;
     }
+    
+    loaderEl.classList.remove('is-hidden');
+    currentPage = 1;
+    const response = await fetchImages(searchedValue, currentPage);
+    console.log(response);
 
     loaderEl.classList.add('is-hidden');
 
@@ -50,6 +52,7 @@ const onFormSubmit = async event => {
         position: 'center',
         timeout: 2000,
       });
+      loadMoreEl.classList.add('is-hidden');
       galleryEl.innerHTML = '';
       searchForm.reset();
 
@@ -59,10 +62,10 @@ const onFormSubmit = async event => {
     const galleryCardsTemplate = response.data.hits
       .map(imgDetails => createGalleryCard(imgDetails))
       .join('');
-      galleryEl.innerHTML = galleryCardsTemplate;
-      
-      const galleryCardEl = document.querySelector('li');
-      cardHeight = galleryCardEl.getBoundingClientRect().height;
+    galleryEl.innerHTML = galleryCardsTemplate;
+
+    const galleryCardEl = document.querySelector('li');
+    cardHeight = galleryCardEl.getBoundingClientRect().height;
 
     loadMoreEl.classList.remove('is-hidden');
 
@@ -96,25 +99,31 @@ const onLoadMoreClick = async event => {
     const galleryCardsTemplate = response.data.hits
       .map(imgDetails => createGalleryCard(imgDetails))
       .join('');
-      galleryEl.insertAdjacentHTML('beforeend', galleryCardsTemplate);
+    galleryEl.insertAdjacentHTML('beforeend', galleryCardsTemplate);
 
-      lightBox.refresh();
-      
-      scrollBy({
-        top: cardHeight * 2,
-        behavior: 'smooth',
+    lightBox.refresh();
+
+    scrollBy({
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
+
+    if (currentPage >= Math.ceil(response.data.totalHits / 15)) {
+      loadMoreEl.classList.add('is-hidden');
+      iziToast.info({
+        position: 'topRight',
+        message: "We're sorry, but you've reached the end of search results.",
       });
-
-      if (currentPage >= Math.ceil(response.data.totalHits / 15)) {
-        loadMoreEl.classList.add('is-hidden');
-        iziToast.info({
-          position: 'topRight',
-          message: "We're sorry, but you've reached the end of search results.",
-        });
-      }
-
+    }
   } catch (err) {
     console.log(err);
+    iziToast.error({
+      title: 'Error',
+      message:
+        'Sorry, there are no images matching your search query. Please try again!',
+      position: 'center',
+      timeout: 2000,
+    });
   }
 };
 
